@@ -14,17 +14,22 @@ def main():
     # Cargar datos
     df = load_data()
     
-    # Buscador en la parte superior (filtra por Descripción o Clave)
+    # Obtener parámetros de la URL para la selección de línea
+    default_lines = st.query_params.get("linea", [])
+    
+    # Buscador (filtra por Descripción o Clave)
     search_term = st.text_input("Buscar producto por descripción o clave", "")
     
-    # Filtros opcionales: selección múltiple para línea de producto y tipos de precio
+    # Filtro de línea con valores por defecto provenientes de la URL
     all_lines = sorted(df["Línea"].unique().tolist())
-    selected_lines = st.multiselect("Selecciona línea(s) de producto (opcional)", options=all_lines)
+    selected_lines = st.multiselect("Selecciona línea(s) de producto (opcional)", options=all_lines, default=default_lines)
     
-    price_options = ["Pub", "MM", "Cj", "min"]
-    selected_prices = st.multiselect("Selecciona tipo(s) de precio a mostrar (opcional)", options=price_options)
-    if not selected_prices:
-        selected_prices = price_options  # Mostrar todos si no se selecciona ninguno
+    # Actualizar la URL con el filtro de línea seleccionado
+    st.query_params.update(linea=selected_lines)
+    
+    # Selección del tipo de precio (único) con "Cj" como opción por defecto
+    # price_options = ["Pub", "MM", "Cj", "min"]
+    # selected_price = st.selectbox("Selecciona el tipo de precio a mostrar", options=price_options, index=price_options.index("Cj"))
     
     # Aplicar filtros al DataFrame
     df_filtered = df.copy()
@@ -36,11 +41,12 @@ def main():
     if selected_lines:
         df_filtered = df_filtered[df_filtered["Línea"].isin(selected_lines)]
     
-    # Seleccionar las columnas a mostrar: Clave, Descripción y los tipos de precio seleccionados
-    columns_to_show = ["Clave", "Descripción"] + selected_prices
-    df_to_display = df_filtered[columns_to_show]
+    # Seleccionar las columnas a mostrar: Clave, Descripción y la columna del precio seleccionado
+    df_to_display = df_filtered[["Clave", "Descripción", "Cj"]].copy()
+    # Renombrar la columna del precio seleccionado a "Precio"
+    df_to_display.rename(columns={"Cj": "Precio"}, inplace=True)
     
-    # Mostrar la tabla resultante sin índices
+    # Mostrar la tabla sin índices
     st.markdown("### Resultados")
     if df_to_display.empty:
         st.info("No se encontraron productos con los filtros aplicados.")
